@@ -1,271 +1,150 @@
-'use client';
+import Link from "next/link";
+import { 
+  BookOpen, 
+  Archive, 
+  NotebookPen, 
+  Github, 
+  Music,
+  Mail,
+  MessageSquare,
+  Key
+} from "lucide-react";
 
-import { Github, Mail, MessageSquare, Key, ArrowRight, Music, GitBranch, FileText, Home as HomeIcon, BookOpen, Mail as MailIcon, Archive, Sun, Moon } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-
-interface GitHubCommit {
-  repo: string;
-  message: string;
-  date: string;
-  url: string;
+// --- Types ---
+interface GithubEvent {
+  id: string;
+  type: string;
+  actor: { login: string; avatar_url: string };
+  repo: { name: string; url: string };
+  payload: { commits?: Array<{ message: string; sha: string }> };
+  created_at: string;
 }
 
-export default function Home() {
-  const [visitorCount, setVisitorCount] = useState(0);
-  const [theme, setTheme] = useState('dark');
-  const [latestCommit, setLatestCommit] = useState<GitHubCommit | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Initialize visitor count
-    const currentCount = localStorage.getItem('visitorCount');
-    if (currentCount) {
-      setVisitorCount(parseInt(currentCount));
-    } else {
-      localStorage.setItem('visitorCount', '1');
-      setVisitorCount(1);
-    }
-
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme') || 'dark';
-    setTheme(savedTheme);
-    document.documentElement.classList.toggle('light', savedTheme === 'light');
-
-    // Fetch GitHub commits
-    fetchLatestCommit();
-  }, []);
-
-  const fetchLatestCommit = async () => {
-    try {
-      const response = await fetch('https://api.github.com/users/FLAX9875/events/public?per_page=10');
-      const events = await response.json();
-
-      // Find the latest push event
-      const pushEvent = events.find((event: any) => event.type === 'PushEvent');
-
-      if (pushEvent) {
-        const commit = pushEvent.payload.commits[0];
-        const repoName = pushEvent.repo.name.split('/')[1];
-        const timeAgo = getTimeAgo(new Date(pushEvent.created_at));
-
-        setLatestCommit({
-          repo: repoName,
+// --- Server Action: Fetch GitHub ---
+async function getLatestCommits() {
+  try {
+    const res = await fetch("https://api.github.com/users/FLAX9875/events/public", {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) throw new Error(`GitHub API error`);
+    
+    const events: GithubEvent[] = await res.json();
+    
+    return events
+      .filter((e) => e.type === "PushEvent" && e.payload.commits)
+      .flatMap((e) => 
+        e.payload.commits!.map((commit) => ({
+          id: commit.sha,
+          repo: e.repo.name.replace("FLAX9875/", ""),
           message: commit.message,
-          date: timeAgo,
-          url: `https://github.com/${pushEvent.repo.name}`
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch GitHub data:', error);
-      // Fallback data
-      setLatestCommit({
-        repo: 'netbird-traefik',
-        message: 'pushed to main',
-        date: '15d ago',
-        url: 'https://github.com/FLAX9875'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+          date: e.created_at,
+        }))
+      )
+      .slice(0, 5); // Keep top 5 for cleanliness
+  } catch (error) {
+    return [];
+  }
+}
 
-  const getTimeAgo = (date: Date) => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    const intervals = {
-      year: 31536000,
-      month: 2592000,
-      week: 604800,
-      day: 86400,
-      hour: 3600,
-      minute: 60
-    };
+function formatTimeAgo(dateString: string) {
+  const diff = Math.floor((new Date().getTime() - new Date(dateString).getTime()) / 1000);
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
 
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-      const interval = Math.floor(seconds / secondsInUnit);
-      if (interval >= 1) {
-        return `${interval}${unit.charAt(0)} ago`;
-      }
-    }
-    return 'just now';
-  };
-
-  const incrementVisitor = () => {
-    const newCount = visitorCount + 1;
-    setVisitorCount(newCount);
-    localStorage.setItem('visitorCount', newCount.toString());
-  };
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.classList.toggle('light', newTheme === 'light');
-  };
-
-  const getOrdinalSuffix = (num: number) => {
-    const j = num % 10;
-    const k = num % 100;
-    if (j === 1 && k !== 11) return num + 'st';
-    if (j === 2 && k !== 12) return num + 'nd';
-    if (j === 3 && k !== 13) return num + 'rd';
-    return num + 'th';
-  };
+export default async function Home() {
+  const commits = await getLatestCommits();
 
   return (
-    <div className="min-h-screen bg-background text-foreground theme-transition">
-      {/* Header */}
-      <header className="border-b border-border px-6 py-4 theme-transition">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="text-sm font-mono">heysomting.by</div>
-          <button
-            onClick={toggleTheme}
-            className="p-2 hover:bg-secondary rounded-lg theme-toggle"
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? (
-              <Sun size={20} className="text-foreground" />
-            ) : (
-              <Moon size={20} className="text-foreground" />
-            )}
-          </button>
+    <main className="min-h-screen bg-black text-gray-200 font-sans pb-32 selection:bg-purple-500/30">
+      
+      {/* --- Header / Hero --- */}
+      <div className="max-w-2xl mx-auto px-6 pt-20">
+        <h1 className="text-4xl font-bold tracking-tight text-white mb-4">
+          heysomting
+        </h1>
+        <p className="text-gray-400 text-lg leading-relaxed mb-8">
+          Cybersecurity student & college freshman. Passionate about breaking things to understand how they work.
+        </p>
+
+        {/* Social Links (Restored) */}
+        <div className="flex flex-wrap gap-3 mb-12">
+          <SocialBadge href="https://github.com/FLAX9875" icon={<Github size={14}/>} label="GitHub" />
+          <SocialBadge href="mailto:hi@heysomting.by" icon={<Mail size={14}/>} label="Email" />
+          <SocialBadge href="#" icon={<MessageSquare size={14}/>} label="Discord" />
+          <SocialBadge href="/pgp.txt" icon={<Key size={14}/>} label="PGP Key" />
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="pixelated-text mb-8">hey, i'm somting</h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
-            cybersecurity student && college freshman. passionate about breaking things to understand how they work.
-          </p>
-
-          {/* Social Links */}
-          <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
-            <a href="https://github.com/FLAX9875" target="_blank" rel="noopener noreferrer" className="px-6 py-3 border border-border hover:border-foreground hover:bg-secondary button-hover flex items-center gap-2 text-sm">
-              <Github size={18} />
-              github
-            </a>
-            <a href="mailto:hi@heysomting.by" className="px-6 py-3 border border-border hover:border-foreground hover:bg-secondary button-hover flex items-center gap-2 text-sm">
-              <Mail size={18} />
-              email
-            </a>
-            <a href="#" className="px-6 py-3 border border-border hover:border-foreground hover:bg-secondary button-hover flex items-center gap-2 text-sm">
-              <MessageSquare size={18} />
-              discord
-            </a>
-            <a href="/pgp.txt" className="px-6 py-3 border border-border hover:border-foreground hover:bg-secondary button-hover flex items-center gap-2 text-sm">
-              <Key size={18} />
-              pgp key
-            </a>
+      {/* --- Grid Layout for Content --- */}
+      <div className="max-w-2xl mx-auto px-6 grid gap-6">
+        
+        {/* Restored Music Card */}
+        <div className="p-6 rounded-xl border border-gray-800 bg-gray-900/30 hover:border-gray-600 transition-colors">
+          <div className="flex items-center gap-2 text-xs text-purple-400 uppercase tracking-widest font-bold mb-4">
+            <Music size={14} />
+            Scrobbled
           </div>
-
-          {/* Blog CTA */}
-          <Link href="/blog" className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground hover:opacity-90 button-hover glow-on-hover">
-            read my blog
-            <ArrowRight size={18} />
-          </Link>
+          <h3 className="text-xl font-bold text-white">scary all over</h3>
+          <p className="text-gray-400 text-sm">by yerbby dj</p>
         </div>
 
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-20">
-          {/* Scrobbled Card */}
-          <div className="border border-border p-6 hover:border-foreground card-hover">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 uppercase tracking-wider">
-              <Music size={16} />
-              scrobbled
-            </div>
-            <h3 className="text-xl font-bold mb-2">scary all over</h3>
-            <p className="text-sm text-muted-foreground mb-4">by yerbby dj</p>
-            <a href="https://www.last.fm" target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 button-hover inline-flex">
-              via last.fm
-              <ArrowRight size={12} />
-            </a>
+        {/* GitHub Feed */}
+        <div className="p-6 rounded-xl border border-gray-800 bg-gray-900/30 hover:border-gray-600 transition-colors">
+          <div className="flex items-center gap-2 text-xs text-green-400 uppercase tracking-widest font-bold mb-6">
+            <Github size={14} />
+            Latest Activity
           </div>
-
-          {/* Last Commit Card - GitHub Integration */}
-          <a
-            href={latestCommit?.url || 'https://github.com/FLAX9875'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="border border-border p-6 hover:border-foreground card-hover cursor-pointer"
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 uppercase tracking-wider">
-              <GitBranch size={16} />
-              last commit
-            </div>
-            {loading ? (
-              <div className="animate-pulse">
-                <div className="h-6 bg-muted rounded mb-2"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
+          
+          <div className="space-y-6">
+            {commits.map((commit) => (
+              <div key={commit.id} className="relative pl-4 border-l border-gray-700">
+                 <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-sm font-semibold text-white">{commit.repo}</span>
+                    <span className="text-xs text-gray-500">{formatTimeAgo(commit.date)}</span>
+                 </div>
+                 <p className="text-sm text-gray-400 font-mono truncate">{commit.message}</p>
               </div>
-            ) : (
-              <>
-                <h3 className="text-xl font-bold mb-2">{latestCommit?.message || 'pushed to main'}</h3>
-                <p className="text-sm text-muted-foreground mb-2">FLAX9875/{latestCommit?.repo} • main</p>
-                <p className="text-xs text-muted-foreground">{latestCommit?.date}</p>
-              </>
-            )}
-          </a>
-
-          {/* Latest Post Card */}
-          <Link href="/blog" className="border border-border p-6 hover:border-foreground card-hover">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 uppercase tracking-wider">
-              <FileText size={16} />
-              latest post
-            </div>
-            <h3 className="text-lg font-bold mb-2">Getting Started with Cybersecurity</h3>
-            <p className="text-sm text-muted-foreground mb-2">A beginner's guide to understanding cybersecurity...</p>
-            <p className="text-xs text-muted-foreground">2 days ago</p>
-          </Link>
-        </div>
-
-        {/* Visitor Counter */}
-        <div className="text-center mt-20 pt-8 border-t border-border theme-transition">
-          <p className="text-sm text-muted-foreground mb-4">
-            you are currently the <span className="text-foreground font-bold counter-animate">{getOrdinalSuffix(visitorCount)}</span> visitor!
-          </p>
-          <button
-            onClick={incrementVisitor}
-            className="px-6 py-2 border border-border hover:border-foreground hover:bg-secondary button-hover text-sm"
-          >
-            I visited! Click to count
-          </button>
-        </div>
-      </main>
-
-      {/* Footer with Tooltips */}
-      <footer className="border-t border-border mt-20 theme-transition">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-center gap-8">
-            <Link href="/" className="p-3 hover:bg-secondary rounded-lg button-hover group relative">
-              <HomeIcon size={20} />
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                home
-              </span>
-            </Link>
-            <Link href="/blog" className="p-3 hover:bg-secondary rounded-lg button-hover group relative">
-              <BookOpen size={20} />
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                blog
-              </span>
-            </Link>
-            <Link href="/guestbook" className="p-3 hover:bg-secondary rounded-lg button-hover group relative">
-              <MailIcon size={20} />
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                guestbook
-              </span>
-            </Link>
-            <Link href="/archives" className="p-3 hover:bg-secondary rounded-lg button-hover group relative">
-              <Archive size={20} />
-              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                archives
-              </span>
-            </Link>
+            ))}
+            {commits.length === 0 && <p className="text-gray-500 text-sm">No recent activity.</p>}
           </div>
         </div>
-      </footer>
-    </div>
+
+      </div>
+
+      {/* --- The Dock --- */}
+      <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-2 px-4 py-3 bg-[#111]/90 border border-white/10 rounded-2xl shadow-2xl backdrop-blur-md">
+          <DockLink href="/blog" label="Blog" icon={<BookOpen size={20} />} />
+          <div className="w-px h-8 bg-white/10 mx-1" />
+          <DockLink href="/guestbook" label="Guestbook" icon={<NotebookPen size={20} />} />
+          <div className="w-px h-8 bg-white/10 mx-1" />
+          <DockLink href="/archives" label="Archives" icon={<Archive size={20} />} />
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// --- Small Helper Components ---
+
+function SocialBadge({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+  return (
+    <a href={href} target="_blank" className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-800 bg-gray-900/50 text-xs text-gray-400 hover:text-white hover:border-gray-600 transition-all">
+      {icon} {label}
+    </a>
+  );
+}
+
+function DockLink({ href, label, icon }: { href: string; label: string; icon: React.ReactNode }) {
+  return (
+    <Link href={href} className="group relative flex items-center justify-center p-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-all duration-300 hover:scale-110 active:scale-95">
+      {icon}
+      <span className="absolute -top-12 opacity-0 transform translate-y-2 scale-90 group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 transition-all duration-200 bg-gray-800 text-white text-xs font-medium py-1.5 px-3 rounded-lg border border-gray-700 whitespace-nowrap shadow-xl">
+        {label}
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45 border-r border-b border-gray-700"></span>
+      </span>
+    </Link>
   );
 }
