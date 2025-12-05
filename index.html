@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somting's Portfolio</title>
+    <style>
+        /* General Styles for a minimal, clean look */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Default (Light Mode) */
+        body {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Dark Mode */
+        .dark-mode {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .dark-mode a {
+            color: #90ee90; /* A light green for links */
+        }
+        .dark-mode .activity-item {
+            border-left-color: #444 !important;
+        }
+        .dark-mode .footer {
+            border-top-color: #444 !important;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 1.5em;
+            margin: 0;
+            font-weight: normal;
+        }
+        
+        p, .link-section, .activity-section {
+            margin-bottom: 20px;
+        }
+        
+        .activity-item {
+            border-left: 3px solid #ccc;
+            padding-left: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ccc;
+            font-size: 0.9em;
+        }
+
+        #theme-toggle {
+            padding: 5px 10px;
+            cursor: pointer;
+            background: none;
+            border: 1px solid currentColor;
+            color: inherit;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="dark-mode"> <div class="header">
+        <h1>Somting's Portfolio</h1>
+        <button id="theme-toggle">Toggle theme</button>
+    </div>
+
+    <p style="font-size: 1.2em;">hey, i'm Somting</p>
+    <p>cybersecurity student && college freshman. passionate about breaking things to understand how they work.</p>
+
+    <div class="link-section">
+        <p><a href="[REPLACE WITH YOUR GITHUB URL]" target="_blank">github</a></p>
+        <p><a href="mailto:[REPLACE WITH YOUR EMAIL ADDRESS]">email</a></p>
+        <p><a href="[REPLACE WITH YOUR DISCORD INVITE LINK]" target="_blank">discord</a></p>
+        <p><a href="[REPLACE WITH YOUR PGP KEY URL]" target="_blank">pgp key</a></p>
+        <p><a href="[REPLACE WITH YOUR BLOG URL]">read my blog</a></p>
+    </div>
+
+    <div class="activity-section">
+        
+        <div class="activity-item">
+            <strong>scrobbled</strong>
+            <p>"Title of Your Last Song" by Artist Name via <a href="[REPLACE WITH LAST.FM URL]">last.fm</a></p>
+        </div>
+
+        <div class="activity-item">
+            <strong>last commit</strong>
+            <p>pushed to main <a href="[REPLACE WITH REPO COMMIT URL]">Somting/repo-name</a> • 2d ago</p>
+        </div>
+
+        <div class="activity-item">
+            <strong>latest post</strong>
+            <p><a href="[REPLACE WITH POST URL]">Setting Up a Honeypot w/ Monitoring (Example)</a></p>
+            <p style="font-size: 0.9em; color: #aaa;">Step-by-step guide to setting up your first cybersecurity project...</p>
+            <p style="font-size: 0.8em; color: #777;">2 months ago</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>you are currently the 1st visitor! (Requires a third-party service for a real counter)</p>
+        <p>Somting's Portfolio</p>
+    </div>
+
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Function to toggle theme class
+        function toggleTheme() {
+            body.classList.toggle('dark-mode');
+        }
+
+        // Event listener for the button
+        toggleButton.addEventListener('click', toggleTheme);
+    </script>
+</body>
+</html>
