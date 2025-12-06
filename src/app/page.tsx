@@ -138,7 +138,7 @@ export default function Home() {
         <div className="text-center mb-12">
           <h1 className="pixelated-text mb-8">hey, i'm somting</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12">
-            cybersecurity student && college freshman. passionate about breaking things to understand how they work.
+            I am a freshman and enjoy to code and play around
           </p>
 
           {/* Social Links */}
